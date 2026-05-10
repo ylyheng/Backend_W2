@@ -1,4 +1,5 @@
 
+import fs from "fs";
 import { Duration } from "../model/Duration.js";
 import { RaceResult } from "../model/RaceResult.js";
 
@@ -22,7 +23,7 @@ export class RaceResultsService {
    * @param {RaceResult} result - The prace result.
    */
   addRaceResult(result) {
-    // TODO
+    this._raceResults.push(result);
   }
 
   /**
@@ -30,7 +31,8 @@ export class RaceResultsService {
    * @param {string} filePath - The path to the file where data should be saved.
    */
   saveToFile(filePath) {
-    // TODO
+    const jsonData = JSON.stringify(this._raceResults, null, 2);
+    fs.writeFileSync(filePath, jsonData, "utf8");
   }
 
   /**
@@ -39,7 +41,24 @@ export class RaceResultsService {
    * @returns {boolean} True if loading was successful, false otherwise.
    */
   loadFromFile(filePath) {
-    // TODO
+    try {
+      const data = fs.readFileSync(filePath, "utf8");
+      const parsed = JSON.parse(data);
+
+      this._raceResults = parsed.map(
+        (item) =>
+          new RaceResult(
+            item.participant_id,
+            item.sport,
+            new Duration(item.time?._totalSeconds ?? 0)
+          )
+      );
+
+      return true;
+    } catch (error) {
+      console.error("Error loading race results:", error.message);
+      return false;
+    }
   }
 
   /**
@@ -49,15 +68,27 @@ export class RaceResultsService {
    * @returns {Duration|null} Duration if found, else null.
    */
   getTimeForParticipant(participantId, sport) {
-       // TODO
+    const foundResult = this._raceResults.find(
+      (result) =>
+        result.participant_id === participantId && result.sport === sport
+    );
+
+    return foundResult ? foundResult.time : null;
   }
 
   /**
    * Computes the total time for a given participant by summing their race times.
    * @param {string} participantId - The ID of the participant.
-   * @returns {Duration|null} The total Duration object if found, otherwise null.
+   * @returns {Duration} The total Duration object.
    */
   getTotalTimeForParticipant(participantId) {
-        // TODO
+    const participantResults = this._raceResults.filter(
+      (result) => result.participant_id === participantId
+    );
+
+    return participantResults.reduce(
+      (totalDuration, result) => totalDuration.plus(result.time),
+      new Duration(0)
+    );
   }
 }
